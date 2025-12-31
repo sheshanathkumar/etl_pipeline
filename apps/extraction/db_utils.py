@@ -53,7 +53,7 @@ def fetch_jobs_for_transformation(limit=5):
     sql = """
     SELECT job_id, raw_path
     FROM job_metadata
-    WHERE status = 'extracted'
+    WHERE status = 'EXTRACTED'
     FOR UPDATE SKIP LOCKED
     LIMIT %s
     """

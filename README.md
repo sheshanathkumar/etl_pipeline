@@ -60,7 +60,7 @@ Check Excel output
 - `ls -la data/processed/*.xlsx`
 
 Postgres job status
-- `docker compose exec postgres psql -U shesho -d etl_db -c "SELECT * FROM job_metadata"`
+- `docker compose exec postgres psql -U postgres -d etl_db -c "SELECT * FROM job_metadata"`
 
 Raw data
 - `ls -la data/raw/`

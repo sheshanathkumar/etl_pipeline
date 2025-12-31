@@ -39,9 +39,9 @@ def export_to_excel(transformations_dict, output_path):
     logger.info(f"✓ Excel file created: {output_path}")
     return output_path
 
-def transformation_process(csv_file, processed_path):
-    logger.info(f"Starting transformation process on file: {csv_file}")
-    df = spark.read.option("header", "true").csv(csv_file)
+def transformation_process(raw_path, processed_path):
+    logger.info(f"Starting transformation process on file: {raw_path}")
+    df = spark.read.option("header", "true").csv(raw_path)
     total_rows = df.count()
 
     transformations = {}
@@ -56,13 +56,13 @@ def transformation_process(csv_file, processed_path):
     transformations["Payment_Method"] = payment_method_efficiency(df)
     transformations["Geographic_Risk"] = geographic_risk_scoring(df)
     transformations["Card_Company_Performance"] = card_company_performance_dashboard(df)
-    logger.info(f"Transformation process completed for file: {csv_file} with total users: {total_rows}")
+    logger.info(f"Transformation process completed for file: {raw_path} with total users: {total_rows}")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     excel_path = f"{processed_path}_{timestamp}.xlsx"
     excel_file = export_to_excel(transformations, excel_path)
     
-    logger.info(f"Transformation process completed for {csv_file}")
+    logger.info(f"Transformation process completed for {raw_path}")
     logger.info(f"Total rows processed: {total_rows}")
     logger.info(f"Excel output: {excel_file}")
     
@@ -228,16 +228,19 @@ if __name__ == "__main__":
         raw_path = job["raw_path"]
 
         logger.info(f"Transforming job {job_id} with raw data at {raw_path}")
-        csv_files = glob.glob(os.path.join(raw_path, "*", "*.csv"))
-        if not csv_files:
-            logger.error(f"No CSV files found in {raw_path} for job {job_id}")
-            continue
-        else:
-            csv_file = csv_files[0]
-            processed_path = f"/data/processed/credit_card/job_id={job_id}"
-            transformation_process(csv_file, processed_path)
-            update_job_status(job_id, "TRANDFORMED", processed_path)
-            logger.info(f"Job {job_id} transformed successfully and written to {processed_path}")
+        processed_path = f"/data/processed/credit_card/job_id={job_id}"
+        transformation_process(raw_path, processed_path)
+        update_job_status(job_id, "TRANDFORMED", processed_path)
+        logger.info(f"Job {job_id} transformed successfully and written to {processed_path}")
+        # csv_files = glob.glob(os.path.join(raw_path, "*", "*.csv"))
+        # if not csv_files:
+        #     logger.error(f"No CSV files found in {raw_path} for job {job_id}")
+        #     continue
+        # else:
+        #     csv_file = csv_files[0]
+        #     processed_path = f"/data/processed/credit_card/job_id={job_id}"
+        #     transformation_process(csv_file, processed_path)
+        #     update_job_status(job_id, "TRANDFORMED", processed_path)
+        #     logger.info(f"Job {job_id} transformed successfully and written to {processed_path}")
     logger.info("All transformations completed.")
     
-        
