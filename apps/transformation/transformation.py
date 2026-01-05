@@ -14,10 +14,15 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-spark = SparkSession.builder \
-    .appName("credit-card-transformation") \
-    .master("spark://spark-master:7077") \
+spark = (
+    SparkSession.builder
+    .appName("credit-card-transformation")
+    .master("spark://spark-master:7077")
+    .config("spark.rpc.message.maxSize", "256")
+    .config("spark.driver.maxResultSize", "1g")
+    .config("spark.sql.shuffle.partitions", "400")
     .getOrCreate()
+)
 
 
 def export_to_excel(transformations_dict, output_path):
@@ -221,26 +226,24 @@ def cleanup_temp_files(output_path):
         logger.error(f"Error during cleanup of temporary files: {e}")
 
 if __name__ == "__main__":
-    jobs = fetch_jobs_for_transformation(limit=5)
-    logger.info(f"Fetched {len(jobs)} jobs for transformation")
-    for job in jobs:
-        job_id = job["job_id"]
-        raw_path = job["raw_path"]
+    poll_seconds = 30
+    while True:
+        jobs = fetch_jobs_for_transformation(limit=5)
+        if not jobs:
+            logger.info(f"No extracted jobs found. Sleeping {poll_seconds}s...")
+            time.sleep(poll_seconds)
+            continue
 
-        logger.info(f"Transforming job {job_id} with raw data at {raw_path}")
-        processed_path = f"/data/processed/credit_card/job_id={job_id}"
-        transformation_process(raw_path, processed_path)
-        update_job_status(job_id, "TRANDFORMED", processed_path)
-        logger.info(f"Job {job_id} transformed successfully and written to {processed_path}")
-        # csv_files = glob.glob(os.path.join(raw_path, "*", "*.csv"))
-        # if not csv_files:
-        #     logger.error(f"No CSV files found in {raw_path} for job {job_id}")
-        #     continue
-        # else:
-        #     csv_file = csv_files[0]
-        #     processed_path = f"/data/processed/credit_card/job_id={job_id}"
-        #     transformation_process(csv_file, processed_path)
-        #     update_job_status(job_id, "TRANDFORMED", processed_path)
-        #     logger.info(f"Job {job_id} transformed successfully and written to {processed_path}")
-    logger.info("All transformations completed.")
+        logger.info(f"Fetched {len(jobs)} jobs for transformation")
+        for job in jobs:
+            job_id = job["job_id"]
+            raw_path = job["raw_path"]
+
+            logger.info(f"Transforming job {job_id} with raw data at {raw_path}")
+            processed_path = f"/data/processed/credit_card/job_id={job_id}"
+            transformation_process(raw_path, processed_path)
+            update_job_status(job_id, "TRANDFORMED", processed_path)
+            logger.info(f"Job {job_id} transformed successfully and written to {processed_path}")
+
+        logger.info("Transformation cycle completed. Checking again...")
     

@@ -75,10 +75,7 @@ services:
       - DB_NAME=etl_db
     networks:
       - default
-    command: >
-      bash -c "sleep 40 &&
-      /opt/spark/bin/spark-submit
-      --master spark://spark-master:7077 transformation.py"
+    command: ["/apps/transformation/wait_for_extraction.sh"]
 
 
 volumes:

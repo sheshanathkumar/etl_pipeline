@@ -91,3 +91,8 @@ poetry.lock
 *~
 
 # Spark local files
+
+# Generated data outputs
+data/raw/credit_card/job_id=*/
+data/processed/credit_card/job_id=*/
+data/processed/credit_card/*.xlsx

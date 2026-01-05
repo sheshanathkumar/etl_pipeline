@@ -23,9 +23,14 @@ logger = logging.getLogger(__name__)
 
 logger.info("Starting spark session for credit card extraction")
 
-spark = SparkSession.builder \
-    .appName("credit-card-extraction") \
+spark = (
+    SparkSession.builder
+    .appName("credit-card-extraction")
+    .config("spark.rpc.message.maxSize", "256")
+    .config("spark.driver.maxResultSize", "1g")
+    .config("spark.sql.shuffle.partitions", "400")
     .getOrCreate()
+)
 
 def main():
     logger.info("Starting data extraction process...")
@@ -102,7 +107,7 @@ def extraction_process():
 
     schema= StructType(fields)
     data = []
-    for _ in range(10000):
+    for _ in range(1000000):
         row = []
         for field in schema_json:
             field_name = field['field_name']
@@ -146,7 +151,9 @@ def extraction_process():
             row.append(val)
         data.append(tuple(row))
 
-    df = spark.createDataFrame(data, schema)
+    num_partitions = 64
+    rdd = spark.sparkContext.parallelize(data, num_partitions)
+    df = spark.createDataFrame(rdd, schema)
 
     try :
         logger.info("data extraction completed.. ")
@@ -154,7 +161,7 @@ def extraction_process():
 
         curr_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        df.coalesce(1).write.mode("overwrite").option("header", "true").csv(raw_path)
+        df.write.mode("overwrite").option("header", "true").option("maxRecordsPerFile", 200000).csv(raw_path)
 
         logger.info("csv file prepared and saved to raw_files directory")
         logger.info("file saved in directory: "+ raw_path)
